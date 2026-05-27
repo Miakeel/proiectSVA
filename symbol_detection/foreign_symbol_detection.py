@@ -9,7 +9,7 @@ def is_foreign_symbol(img) -> bool:
 
     kernel = np.ones((3,3), np.uint8)
 
-    thresh = cv2.morphologyEx(thresh,cv2.MORPH_CLOSE,kernel,iterations=2)
+    thresh = cv2.morphologyEx(img,cv2.MORPH_CLOSE,kernel,iterations=2)
 
     thresh = cv2.dilate(thresh,kernel,iterations=2)
 
