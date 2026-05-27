@@ -2,16 +2,20 @@ from config import *
 from img_processing.grid_detection import *
 from img_processing.preprocess import *
 from img_processing.separate_images import *
-from utils.visualization import (show,draw_lines)
-from game_logic.build_game_matrix import build_matrix
+from utils.visualization import *
+from game_logic.build_game_matrix import *
 def main():
+    #read image
     img = cv2.imread(IMAGE_PATH)
+    original = img.copy()
+    original = cv2.resize(original, (BOARD_SIZE, BOARD_SIZE))
     #show("orig",img)
-    originalImg = img.copy()
+    show("original",original)
     
-    img = preprocess(img)
 
-    
+    #STAGE 1: PREPROCESSING ================================ used: img_processing
+
+    img = preprocess(img)
 
     #crop image to game only
     coords=cv2.findNonZero(img)
@@ -21,6 +25,9 @@ def main():
     #resize to be square
     img=cv2.resize(img,(BOARD_SIZE,BOARD_SIZE))
 
+
+    #STAGE 2: GRID DETECTION ================================ used: img_processing.grid_detection
+
     #detect intersection indexes
     vertical , horizontal =detect_grid_lines(img)
     vertical=process_grids_array(vertical)
@@ -29,18 +36,15 @@ def main():
     #separate into 9 images
     imagini=separate_img(img,vertical,horizontal)
 
-    # imgindex=5
-    # show("img",imagini[imgindex])
-    
-    # print(classify_cell(imagini[imgindex]))
 
+    #STAGE 3: BUILD GAME MATRIX ================================ used: game_logic,symbol_detection
     board=build_matrix(imagini)
 
     print("Game Matrix:")
     for row in board:
         print(row)
 
-
+    draw_separated_images(imagini)
 
     draw_lines(img, vertical, horizontal)
 
