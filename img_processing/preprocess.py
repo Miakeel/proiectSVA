@@ -25,6 +25,11 @@ def preprocess(rgbImage): #preprocess the image
     thresh = cv2.morphologyEx(thresh,cv2.MORPH_CLOSE,kernel,iterations=2)
     thresh = cv2.morphologyEx(thresh,cv2.MORPH_OPEN,kernel,iterations=1+IS_PHOTO_REAL)
 
+    if IS_PHOTO_REAL:
+            kernel = np.array([[1,1,1],[1,0,1],[1,1,1]], dtype=np.uint8) #apply a filter to remove isolated pixels that might be noise if photo is real
+            neighbor_count = cv2.filter2D(thresh, -1, kernel)
+
+            thresh[(thresh == 1) & (neighbor_count == 0)] = 0
     
 
     return thresh
