@@ -3,6 +3,7 @@ from img_processing.grid_detection import *
 from img_processing.preprocess import *
 from img_processing.separate_images import *
 from utils.visualization import (show,draw_lines)
+from symbol_detection.classify import classify_cell
 
 def main():
     img = cv2.imread(IMAGE_PATH)
@@ -29,10 +30,10 @@ def main():
     #separate into 9 images
     imagini=separate_img(img,vertical,horizontal)
 
-    imgindex=4
+    imgindex=5
     show("img",imagini[imgindex])
     
-    #print(is_cross(imagini[imgindex]))
+    print(classify_cell(imagini[imgindex]))
 
 
 
