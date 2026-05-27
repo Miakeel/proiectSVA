@@ -1,21 +1,29 @@
 import numpy as np
 import cv2
 
-def is_foreign_symbol(img) -> bool:
-    
-    h, w = img.shape[:2]
+from symbol_detection.circle_detection import detect_circle
+from symbol_detection.cross_detection import detect_x
 
-    img = img[int(h*0.2):int(h*0.8),int(w*0.2):int(w*0.8)]
 
-    kernel = np.ones((3,3), np.uint8)
+def detect_foreign(image,crop_fraction: float = 0.10) -> bool:
+    has_x = detect_x(image)
+    has_o = detect_circle(image)
 
-    thresh = cv2.morphologyEx(img,cv2.MORPH_CLOSE,kernel,iterations=2)
+    if has_x or has_o:
+        return False
 
-    thresh = cv2.dilate(thresh,kernel,iterations=2)
+    # Check if the cell has any meaningful content at all (not empty)
+    if image.ndim == 3:
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    else:
+        gray = image.copy()
+    _, binary = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
+    if np.count_nonzero(binary) > binary.size // 2:
+        binary = cv2.bitwise_not(binary)
 
-    density = np.sum(img > 0) / img.size
+    h, w = binary.shape
+    dy, dx = max(1, int(h * crop_fraction)), max(1, int(w * crop_fraction))
+    cropped = binary[dy:h-dy, dx:w-dx]
 
-    if density > 0.1:
-        return True
-
-    return False
+    foreground_ratio = np.count_nonzero(cropped) / cropped.size
+    return foreground_ratio > 0.02  # cell has content but matched neither X nor O
