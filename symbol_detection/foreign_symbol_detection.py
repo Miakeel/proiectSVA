@@ -1,35 +1,38 @@
-import numpy as np
 import cv2
+import numpy as np
 
-from symbol_detection.circle_detection import detect_circle
-from symbol_detection.cross_detection import detect_x
+from config import FOREIGN_MARGIN, FOREIGN_MIN_DENSITY, FOREIGN_MIN_CONTOUR_AREA
 
 
-def detect_foreign(image, crop_fraction: float = 0.10) -> bool:
-    has_x = detect_x(image)
-    has_o = detect_circle(image)
-
-    if has_x or has_o:
-        return False
-    h, w = image.shape[:2]
-    percent = 0.2
-    image = image[
-        int(percent * h) : int((1 - percent) * h),
-        int(percent * w) : int((1 - percent) * w),
-    ]
-
-    # Check if the cell has any meaningful content at all (not empty)
+def _to_binary_foreground(image: np.ndarray) -> np.ndarray:
     if image.ndim == 3:
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    else:
-        gray = image.copy()
-    _, binary = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    _, binary = cv2.threshold(image, 127, 255, cv2.THRESH_BINARY)
+    # Ensure foreground is white
     if np.count_nonzero(binary) > binary.size // 2:
         binary = cv2.bitwise_not(binary)
+    return binary
 
+
+def detect_foreign(
+    image: np.ndarray,
+    margin: float = FOREIGN_MARGIN,
+    min_density: float = FOREIGN_MIN_DENSITY,
+    min_contour_area: int = FOREIGN_MIN_CONTOUR_AREA,
+) -> bool:
+    binary = _to_binary_foreground(image)
+
+    # Crop cell borders to exclude grid line remnants
     h, w = binary.shape
-    dy, dx = max(1, int(h * crop_fraction)), max(1, int(w * crop_fraction))
-    cropped = binary[dy : h - dy, dx : w - dx]
+    binary = binary[
+        int(margin * h) : int((1 - margin) * h),
+        int(margin * w) : int((1 - margin) * w),
+    ]
 
-    foreground_ratio = np.count_nonzero(cropped) / cropped.size
-    return foreground_ratio > 0.02  # cell has content but matched neither X nor O
+    # Reject cells with negligible ink (likely empty)
+    if np.count_nonzero(binary) / binary.size < min_density:
+        return False
+
+    # Confirm structured content via at least one contour of meaningful size
+    contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    return any(cv2.contourArea(c) >= min_contour_area for c in contours)
