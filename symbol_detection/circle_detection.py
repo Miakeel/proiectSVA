@@ -2,7 +2,12 @@ import cv2
 import numpy as np
 
 
-def detect_circle(binary):
+def detect_circle(binary, closing_kernel_size=5, closing_iterations=2):
+    # Closing bridges small gaps in incomplete circle outlines (dilate then erode)
+    kernel = cv2.getStructuringElement(
+        cv2.MORPH_ELLIPSE, (closing_kernel_size, closing_kernel_size)
+    )
+    binary = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel, iterations=closing_iterations)
 
     contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     if not contours:
